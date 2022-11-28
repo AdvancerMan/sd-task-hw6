@@ -23,8 +23,8 @@ class CalcVisitor : TokenVisitor<Int> {
             )
         }
 
-        val firstOperand = buffer.removeLast()
         val secondOperand = buffer.removeLast()
+        val firstOperand = buffer.removeLast()
         val result = when (operationToken.type) {
             OperationToken.OperationType.PLUS -> firstOperand + secondOperand
             OperationToken.OperationType.MINUS -> firstOperand - secondOperand

@@ -57,6 +57,7 @@ class ParserVisitor : TokenVisitor<List<Token>> {
 
     override fun getResult(): List<Token> {
         result.addAll(buffer.asReversed())
+        buffer.clear()
         return result
     }
 }

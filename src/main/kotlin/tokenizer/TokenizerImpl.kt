@@ -13,19 +13,20 @@ class TokenizerImpl : Tokenizer {
     private val numberBuffer = StringBuilder()
 
     override fun handleCharacter(character: Char?) {
-        if (character?.isWhitespace() == true) {
-            return
-        }
-
         when (state) {
             State.START -> handleStartState(character)
             State.NUMBER -> handleNumberState(character)
+            State.CLOSED_PARENTHESIS -> handleClosedParenthesisState(character)
             State.ERROR -> throw getUnexpectedCharacterException(character)
             State.END -> throw getUnexpectedCharacterException(character)
         }
     }
 
     private fun handleStartState(character: Char?) {
+        if (character?.isWhitespace() == true) {
+            return
+        }
+
         if (character == '(') {
             tokens.add(ParenthesisToken(ParenthesisToken.ParenthesisType.LEFT))
             parenthesisBalance++
@@ -42,6 +43,12 @@ class TokenizerImpl : Tokenizer {
     }
 
     private fun handleNumberState(character: Char?) {
+        if (character?.isWhitespace() == true) {
+            flushNumberBuffer()
+            state = State.CLOSED_PARENTHESIS
+            return
+        }
+
         if (character == null) {
             flushNumberBuffer()
             state = State.END
@@ -52,12 +59,10 @@ class TokenizerImpl : Tokenizer {
             flushNumberBuffer()
 
             parenthesisBalance--
-            if (parenthesisBalance == 0) {
-                throw getUnexpectedCharacterException(character, "too many closing parenthesis handled, balance became negative")
-            }
+            checkParenthesisBalance(character)
 
             tokens.add(ParenthesisToken(ParenthesisToken.ParenthesisType.RIGHT))
-            state = State.START
+            state = State.CLOSED_PARENTHESIS
             return
         }
 
@@ -69,6 +74,42 @@ class TokenizerImpl : Tokenizer {
         val operationToken = parseOperationToken(character)
         if (operationToken != null) {
             flushNumberBuffer()
+            tokens.add(operationToken)
+            state = State.START
+            return
+        }
+
+        throw getUnexpectedCharacterException(character)
+    }
+
+    private fun checkParenthesisBalance(character: Char?) {
+        if (parenthesisBalance < 0) {
+            throw getUnexpectedCharacterException(
+                character,
+                "too many closing parenthesis handled, balance became negative"
+            )
+        }
+    }
+
+    private fun handleClosedParenthesisState(character: Char?) {
+        if (character?.isWhitespace() == true) {
+            return
+        }
+
+        if (character == null) {
+            state = State.END
+            return
+        }
+
+        if (character == ')') {
+            parenthesisBalance--
+            checkParenthesisBalance(character)
+            tokens.add(ParenthesisToken(ParenthesisToken.ParenthesisType.RIGHT))
+            return
+        }
+
+        val operationToken = parseOperationToken(character)
+        if (operationToken != null) {
             tokens.add(operationToken)
             state = State.START
             return
@@ -115,7 +156,7 @@ class TokenizerImpl : Tokenizer {
 
     override fun getResult(): List<Token> {
         if (parenthesisBalance != 0) {
-            throw TokenizerException("Invalid parenthesis balancer handled, expected 0, got $parenthesisBalance")
+            throw TokenizerException("Invalid parenthesis balance handled, expected 0, got $parenthesisBalance")
         }
         if (state != State.END) {
             throw TokenizerException("Requested result at unexpected state, expected END, got $state")
@@ -127,6 +168,7 @@ class TokenizerImpl : Tokenizer {
     private enum class State {
         START,
         NUMBER,
+        CLOSED_PARENTHESIS,
         ERROR,
         END,
     }

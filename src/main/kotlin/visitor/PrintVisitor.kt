@@ -1,13 +1,13 @@
 package visitor
 
-import tokenizer.token.ParenthesisToken
 import tokenizer.token.NumberToken
 import tokenizer.token.OperationToken
-import java.io.PrintWriter
+import tokenizer.token.ParenthesisToken
+import java.io.PrintStream
 
 class PrintVisitor(
 
-    private val writer: PrintWriter,
+    private val writer: PrintStream,
 ) : TokenVisitor<Unit> {
 
     override fun visit(numberToken: NumberToken) {
@@ -33,11 +33,11 @@ class PrintVisitor(
     }
 
     private fun write(a: String) {
-        writer.write(a)
-        writer.write(" ")
+        writer.print(a)
+        writer.print(" ")
     }
 
     override fun getResult() {
-        // no result
+        writer.flush()
     }
 }
